@@ -46,6 +46,7 @@ pub fn main() !void {
         const dt = rl.getFrameTime();
         const rotation_speed: f32 = 3.0;
         const move_speed: f32 = 150.0;
+        var move_step: f32 = 0.0;
 
         // Angulo vista
         if (rl.isKeyDown(rl.KeyboardKey.left) or rl.isKeyDown(rl.KeyboardKey.a)) {
@@ -54,15 +55,38 @@ pub fn main() !void {
         if (rl.isKeyDown(rl.KeyboardKey.right) or rl.isKeyDown(rl.KeyboardKey.d)) {
             player.angle += rotation_speed * dt;
         }
+
         // Movimiento
         if (rl.isKeyDown(rl.KeyboardKey.up) or rl.isKeyDown(rl.KeyboardKey.w)) {
-            player.x += @cos(player.angle) * move_speed * dt;
-            player.y += @sin(player.angle) * move_speed * dt;
+            move_step += move_speed * dt;
         }
         if (rl.isKeyDown(rl.KeyboardKey.down) or rl.isKeyDown(rl.KeyboardKey.s)) {
-            player.x -= @cos(player.angle) * move_speed * dt;
-            player.y -= @sin(player.angle) * move_speed * dt;
+            move_step -= move_speed * dt;
         }
+
+        if (move_step != 0.0) {
+            const new_x = player.x + @cos(player.angle) * move_step;
+            const new_y = player.y + @sin(player.angle) * move_step;
+
+            const tile_size_f = @as(f32, @floatFromInt(TILE_SIZE));
+
+            // Posicion a la que va
+            const check_x: usize = @intFromFloat(new_x / tile_size_f);
+            const check_y: usize = @intFromFloat(new_y / tile_size_f);
+            // Posicion actual
+            const current_x: usize = @intFromFloat(player.x / tile_size_f);
+            const current_y: usize = @intFromFloat(player.y / tile_size_f);
+
+            // Eje X
+            if (check_x < MAP_WIDTH and world_map[current_y][check_x] == 0) {
+                player.x = new_x;
+            }
+            // Eje Y
+            if (check_y < MAP_HEIGHT and world_map[check_y][current_x] == 0) {
+                player.y = new_y;
+            }
+        }
+
         // Empieza loop
         rl.beginDrawing();
         rl.clearBackground(rl.Color.black);
