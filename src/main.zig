@@ -35,7 +35,7 @@ pub fn main() !void {
 
     rl.setTargetFPS(15);
 
-    const player = Player{
+    var player = Player{
         .x = 2.5 * @as(f32, @floatFromInt(TILE_SIZE)),
         .y = 4.5 * @as(f32, @floatFromInt(TILE_SIZE)),
         .angle = 0.0,
@@ -43,6 +43,27 @@ pub fn main() !void {
 
     // Game loop
     while (!rl.windowShouldClose()) {
+        const dt = rl.getFrameTime();
+        const rotation_speed: f32 = 3.0;
+        const move_speed: f32 = 150.0;
+
+        // Angulo vista
+        if (rl.isKeyDown(rl.KeyboardKey.left) or rl.isKeyDown(rl.KeyboardKey.a)) {
+            player.angle -= rotation_speed * dt;
+        }
+        if (rl.isKeyDown(rl.KeyboardKey.right) or rl.isKeyDown(rl.KeyboardKey.d)) {
+            player.angle += rotation_speed * dt;
+        }
+        // Movimiento
+        if (rl.isKeyDown(rl.KeyboardKey.up) or rl.isKeyDown(rl.KeyboardKey.w)) {
+            player.x += @cos(player.angle) * move_speed * dt;
+            player.y += @sin(player.angle) * move_speed * dt;
+        }
+        if (rl.isKeyDown(rl.KeyboardKey.down) or rl.isKeyDown(rl.KeyboardKey.s)) {
+            player.x -= @cos(player.angle) * move_speed * dt;
+            player.y -= @sin(player.angle) * move_speed * dt;
+        }
+        // Empieza loop
         rl.beginDrawing();
         rl.clearBackground(rl.Color.black);
         for (0..MAP_HEIGHT) |y| {
