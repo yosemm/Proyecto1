@@ -22,7 +22,7 @@ pub fn build(b: *std.Build) void {
     // in this directory.
     const raylib_dep = b.dependency("raylib_zig", .{
         .target = target,
-        .optimize = optimize,
+        .optimize = .ReleaseFast,
     });
 
     const raylib = raylib_dep.module("raylib"); // main raylib module

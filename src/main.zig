@@ -1,71 +1,71 @@
-const std = @import("std");
-const Io = std.Io;
-
 const Proyecto1 = @import("Proyecto1");
+const std = @import("std");
+const rl = @import("raylib");
 
-pub fn main(init: std.process.Init) !void {
-    // Prints to stderr, unbuffered, ignoring potential errors.
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
+// Dimensiones
+const MAP_WIDTH: usize = 8;
+const MAP_HEIGHT: usize = 8;
+const TILE_SIZE: i32 = 64;
 
-    // This is appropriate for anything that lives as long as the process.
-    const arena: std.mem.Allocator = init.arena.allocator();
+// Mapa
+const world_map = [MAP_HEIGHT][MAP_WIDTH]u8{
+    .{ 1, 1, 1, 1, 1, 1, 1, 1 },
+    .{ 1, 0, 0, 0, 0, 0, 0, 1 },
+    .{ 1, 0, 1, 1, 0, 1, 0, 1 },
+    .{ 1, 0, 1, 0, 0, 1, 0, 1 },
+    .{ 1, 0, 0, 0, 0, 0, 0, 1 },
+    .{ 1, 0, 1, 0, 0, 1, 0, 1 },
+    .{ 1, 0, 0, 0, 0, 0, 0, 1 },
+    .{ 1, 1, 1, 1, 1, 1, 1, 1 },
+};
 
-    // Accessing command line arguments:
-    const args = try init.minimal.args.toSlice(arena);
-    for (args) |arg| {
-        std.log.info("arg: {s}", .{arg});
-    }
+// Jugador
+const Player = struct {
+    x: f32,
+    y: f32,
+    angle: f32,
+};
 
-    // In order to do I/O operations need an `Io` instance.
-    const io = init.io;
+pub fn main() !void {
+    const screen_width = MAP_WIDTH * @as(usize, @intCast(TILE_SIZE));
+    const screen_height = MAP_HEIGHT * @as(usize, @intCast(TILE_SIZE));
 
-    // Stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    var stdout_buffer: [1024]u8 = undefined;
-    var stdout_file_writer: Io.File.Writer = .init(.stdout(), io, &stdout_buffer);
-    const stdout_writer = &stdout_file_writer.interface;
+    rl.initWindow(@intCast(screen_width), @intCast(screen_height), "Proyecto 1");
+    defer rl.closeWindow();
 
-    try Proyecto1.printAnotherMessage(stdout_writer);
+    rl.setTargetFPS(15);
 
-    try stdout_writer.flush(); // Don't forget to flush!
-}
-
-test "simple test" {
-    const gpa = std.testing.allocator;
-    var list: std.ArrayList(i32) = .empty;
-    defer list.deinit(gpa); // Try commenting this out and see if zig detects the memory leak!
-    try list.append(gpa, 42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
-}
-
-test "fuzz example" {
-    try std.testing.fuzz({}, testOne, .{});
-}
-
-fn testOne(context: void, smith: *std.testing.Smith) !void {
-    _ = context;
-    // Try passing `--fuzz` to `zig build test` and see if it manages to fail this test case!
-
-    const gpa = std.testing.allocator;
-    var list: std.ArrayList(u8) = .empty;
-    defer list.deinit(gpa);
-    while (!smith.eos()) switch (smith.value(enum { add_data, dup_data })) {
-        .add_data => {
-            const slice = try list.addManyAsSlice(gpa, smith.value(u4));
-            smith.bytes(slice);
-        },
-        .dup_data => {
-            if (list.items.len == 0) continue;
-            if (list.items.len > std.math.maxInt(u32)) return error.SkipZigTest;
-            const len = smith.valueRangeAtMost(u32, 1, @min(32, list.items.len));
-            const off = smith.valueRangeAtMost(u32, 0, @intCast(list.items.len - len));
-            try list.appendSlice(gpa, list.items[off..][0..len]);
-            try std.testing.expectEqualSlices(
-                u8,
-                list.items[off..][0..len],
-                list.items[list.items.len - len ..],
-            );
-        },
+    const player = Player{
+        .x = 2.5 * @as(f32, @floatFromInt(TILE_SIZE)),
+        .y = 4.5 * @as(f32, @floatFromInt(TILE_SIZE)),
+        .angle = 0.0,
     };
+
+    // Game loop
+    while (!rl.windowShouldClose()) {
+        rl.beginDrawing();
+        rl.clearBackground(rl.Color.black);
+        for (0..MAP_HEIGHT) |y| {
+            for (0..MAP_WIDTH) |x| {
+                const screen_x: i32 = @intCast(x * @as(usize, @intCast(TILE_SIZE)));
+                const screen_y: i32 = @intCast(y * @as(usize, @intCast(TILE_SIZE)));
+
+                if (world_map[y][x] == 1) {
+                    rl.drawRectangle(screen_x, screen_y, TILE_SIZE - 1, TILE_SIZE - 1, rl.Color.gray);
+                } else {
+                    rl.drawRectangle(screen_x, screen_y, TILE_SIZE - 1, TILE_SIZE - 1, rl.Color.dark_gray);
+                }
+            }
+        }
+        rl.drawCircle(@intFromFloat(player.x), @intFromFloat(player.y), 8, rl.Color.yellow);
+
+        // Linea de vision
+        const line_length: f32 = 25.0;
+        const line_end_x = player.x + @cos(player.angle) * line_length;
+        const line_end_y = player.y + @sin(player.angle) * line_length;
+
+        rl.drawLine(@intFromFloat(player.x), @intFromFloat(player.y), @intFromFloat(line_end_x), @intFromFloat(line_end_y), rl.Color.red);
+
+        rl.endDrawing();
+    }
 }
